@@ -24,20 +24,21 @@
 
     <!-- Interest input -->
     <div class="interest-wrap">
-      <label class="interest-label" for="interestInput">
-        🏷️ Add your interests <span class="interest-optional">(optional)</span>
+      <label class="interest-label">
+        🏷️ Add your interests <span class="interest-optional">(optional, up to 5)</span>
       </label>
-      <input
-        id="interestInput"
-        class="interest-input"
-        type="text"
-        placeholder="e.g. gaming, music, travel, coding…"
-        maxlength="120"
-        autocomplete="off"
-      />
-      <p class="interest-hint">Separate with commas · We'll try to match you with someone who shares them</p>
-
-      <!-- Tag chips preview -->
+      <div class="tag-input-row">
+        <input
+          id="tagInput"
+          class="interest-input"
+          type="text"
+          placeholder="Type a tag…"
+          maxlength="30"
+          autocomplete="off"
+        />
+        <button class="btn-tag-add" id="tagAddBtn">Add</button>
+      </div>
+      <p class="interest-hint">Press Enter or click Add · We'll match you with someone who shares them</p>
       <div class="tag-chips" id="tagChips"></div>
     </div>
 
@@ -81,33 +82,50 @@
   </div>
 
   <script>
-    const input = document.getElementById('interestInput');
-    const chips = document.getElementById('tagChips');
+    const tagInput = document.getElementById('tagInput');
+    const tagAddBtn = document.getElementById('tagAddBtn');
+    const chipsEl = document.getElementById('tagChips');
+    let tags = [];
 
-    function getTags() {
-      return input.value.split(',').map(s => s.trim()).filter(Boolean);
+    // Pre-fill tags if returning from "Change Tags"
+    const prefilled = new URLSearchParams(window.location.search).get('interests');
+    if (prefilled) {
+      tags = prefilled.split(',').map(s => s.trim()).filter(Boolean).slice(0, 5);
+      renderChips();
     }
 
     function renderChips() {
-      const tags = getTags();
-      chips.innerHTML = tags.map(t =>
-        `<span class="tag-chip">${t}</span>`
+      chipsEl.innerHTML = tags.map((t, i) =>
+        `<span class="tag-chip">${t}<button class="tag-chip-remove" onclick="removeTag(${i})" title="Remove">×</button></span>`
       ).join('');
     }
 
-    input.addEventListener('input', renderChips);
+    function addTag() {
+      const val = tagInput.value.trim().toLowerCase().replace(/[^a-z0-9 _-]/g, '');
+      if (!val || tags.includes(val) || tags.length >= 5) {
+        tagInput.value = '';
+        return;
+      }
+      tags.push(val);
+      tagInput.value = '';
+      renderChips();
+    }
+
+    function removeTag(i) {
+      tags.splice(i, 1);
+      renderChips();
+    }
+
+    tagAddBtn.addEventListener('click', addTag);
+    tagInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); addTag(); }
+    });
 
     function startChat(mode) {
-      const tags = getTags().slice(0, 5);
       const params = new URLSearchParams({ mode });
       if (tags.length) params.set('interests', tags.join(','));
       window.location.href = '/chat?' + params.toString();
     }
-
-    // Allow Enter to start text chat
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') startChat('text');
-    });
   </script>
 </body>
 </html>

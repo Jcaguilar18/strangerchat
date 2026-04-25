@@ -283,6 +283,13 @@ html, body {
 @keyframes spin { to { transform: rotate(360deg); } }
 .chat-state-title { font-size: 1rem; font-weight: 700; color: var(--text); }
 .chat-state-sub   { font-size: 0.82rem; color: var(--muted); margin-top: -0.5rem; }
+.chat-state-actions {
+  display: none;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
 
 /* Message bubbles */
 .msg {
@@ -526,16 +533,56 @@ html, body {
 }
 .interest-input::placeholder { color: #d1d5db; }
 .interest-hint { font-size: 0.75rem; color: var(--muted); margin-top: 0.4rem; }
+
+.tag-input-row {
+  display: flex;
+  gap: 0.5rem;
+}
+.tag-input-row .interest-input { flex: 1; }
+.btn-tag-add {
+  flex-shrink: 0;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 0 1.1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+.btn-tag-add:hover { filter: brightness(1.08); }
+
 .tag-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.65rem; }
 .tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
   font-size: 0.75rem;
   font-weight: 600;
-  padding: 3px 10px;
+  padding: 4px 6px 4px 10px;
   border-radius: 999px;
   background: #ede9fe;
   color: #6d28d9;
   border: 1px solid #ddd6fe;
 }
+.tag-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: rgba(109,40,217,0.15);
+  border: none;
+  color: #6d28d9;
+  font-size: 0.75rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s;
+}
+.tag-chip-remove:hover { background: rgba(109,40,217,0.3); }
 
 /* Mode grid */
 .mode-grid {

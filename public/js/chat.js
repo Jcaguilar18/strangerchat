@@ -34,12 +34,15 @@ const stopBtn      = document.getElementById('stopBtn');
 const statusBar    = document.getElementById('statusBar');
 const statusText   = document.getElementById('statusText');
 const typingRow    = document.getElementById('typingRow');
-const chatState    = document.getElementById('chatState');
-const chatStateSub = document.getElementById('chatStateSub');
-const interestsBar = document.getElementById('interestsBar');
-const interestsTags = document.getElementById('interestsTags');
-const actionBar    = document.getElementById('actionBar');
-const actionNextBtn = document.getElementById('actionNextBtn');
+const chatState       = document.getElementById('chatState');
+const chatStateSub    = document.getElementById('chatStateSub');
+const chatStateActions = document.getElementById('chatStateActions');
+const interestsBar    = document.getElementById('interestsBar');
+const interestsTags   = document.getElementById('interestsTags');
+const actionBar       = document.getElementById('actionBar');
+const actionNextBtn   = document.getElementById('actionNextBtn');
+const stopSearchBtn   = document.getElementById('stopSearchBtn');
+const changeTagsBtn   = document.getElementById('changeTagsBtn');
 
 /* ── Show user's own interest tags in the bar ── */
 function renderUserInterests() {
@@ -124,11 +127,12 @@ function setInputEnabled(on) {
   if (on) inputEl.focus();
 }
 
-function showChatState(title, sub) {
+function showChatState(title, sub, showActions = false) {
   if (!chatState) return;
   chatState.querySelector('.chat-state-title').textContent = title;
   if (chatStateSub) chatStateSub.textContent = sub;
   chatState.style.display = 'flex';
+  if (chatStateActions) chatStateActions.style.display = showActions ? 'flex' : 'none';
 }
 
 function hideChatState() {
@@ -181,7 +185,7 @@ socket.on('waiting', () => {
   setInputEnabled(false);
   clearChat();
   closePC();
-  showChatState('Finding you a stranger…', 'Searching the network');
+  showChatState('Finding you a stranger…', 'Searching the network', true);
 });
 
 socket.on('matched', ({ common } = {}) => {
@@ -253,6 +257,12 @@ socket.on('stopped', () => {
 nextBtn.addEventListener('click', () => socket.emit('next'));
 stopBtn.addEventListener('click', () => socket.emit('stop'));
 if (actionNextBtn) actionNextBtn.addEventListener('click', () => socket.emit('next'));
+if (stopSearchBtn) stopSearchBtn.addEventListener('click', () => socket.emit('stop'));
+if (changeTagsBtn) changeTagsBtn.addEventListener('click', () => {
+  const params = new URLSearchParams();
+  if (urlInterests) params.set('interests', urlInterests);
+  window.location.href = '/?' + params.toString();
+});
 
 sendBtn.addEventListener('click', sendMessage);
 inputEl.addEventListener('keydown', (e) => {
