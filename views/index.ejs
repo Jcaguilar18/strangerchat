@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StrangerChat — Talk to Random People</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+  <!-- Navbar -->
+  <header class="navbar">
+    <div class="brand">
+      <span class="brand-icon">🎲</span>
+      <span class="brand-name">StrangerChat</span>
+    </div>
+    <div id="statusBar" class="status status--searching">
+      <span class="status-dot"></span>
+      <span id="statusText">Looking for a stranger…</span>
+    </div>
+    <div class="nav-actions">
+      <button id="nextBtn" class="btn btn-next">Next</button>
+      <button id="stopBtn" class="btn btn-stop">Stop</button>
+    </div>
+  </header>
+
+  <!-- Main layout -->
+  <main class="app">
+
+    <!-- Left: video panels -->
+    <section class="video-col">
+      <div class="video-box">
+        <video id="localVideo" autoplay muted playsinline></video>
+        <div class="no-cam" id="localNoCam">
+          <span>📷</span><br/>Camera off
+        </div>
+        <span class="vid-label">You</span>
+      </div>
+      <div class="video-box">
+        <video id="remoteVideo" autoplay playsinline></video>
+        <div class="no-cam" id="remoteNoCam">
+          <span>👤</span><br/>Waiting…
+        </div>
+        <span class="vid-label">Stranger</span>
+      </div>
+    </section>
+
+    <!-- Right: chat -->
+    <section class="chat-col">
+      <div class="messages" id="messages">
+        <div class="welcome">
+          <p>👋 Click <strong>Next</strong> to connect to a stranger.</p>
+          <p class="welcome-sub">Text and video chat — no account needed.</p>
+        </div>
+      </div>
+      <div class="typing-row" id="typingRow">
+        <span class="typing-dots"><span></span><span></span><span></span></span>
+        Stranger is typing…
+      </div>
+      <div class="input-bar">
+        <input
+          type="text"
+          id="msgInput"
+          class="msg-input"
+          placeholder="Type a message…"
+          maxlength="500"
+          autocomplete="off"
+          disabled
+        />
+        <button id="sendBtn" class="btn btn-send" disabled>Send</button>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/chat.js"></script>
+</body>
+</html>
