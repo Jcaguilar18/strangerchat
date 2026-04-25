@@ -18,67 +18,88 @@ app.get('/chat', (req, res) => {
 });
 
 /* ── Matching state ── */
-const waiting = []; // socket IDs waiting for a partner
+const waiting = [];     // socket IDs in queue
 const pairs   = new Map(); // socket.id ↔ partner socket.id
 
+function parseInterests(raw) {
+  return (raw || '').split(',')
+    .map(s => s.trim().toLowerCase())
+    .filter(s => s.length > 0 && s.length < 30)
+    .slice(0, 5);
+}
+
+function connectPair(sockA, sockB, common) {
+  pairs.set(sockA.id, sockB.id);
+  pairs.set(sockB.id, sockA.id);
+  sockA.emit('matched', { common });
+  sockB.emit('matched', { common });
+  sockA.emit('initiate');
+}
+
 function matchUser(socket) {
-  // Drain stale queue entries first
+  const interests = socket.interests || [];
+
+  // 1st pass — find someone with a matching interest
+  if (interests.length > 0) {
+    for (let i = 0; i < waiting.length; i++) {
+      const candId = waiting[i];
+      const cand   = io.sockets.sockets.get(candId);
+      if (!cand || !cand.connected) { waiting.splice(i--, 1); continue; }
+
+      const common = interests.filter(t => (cand.interests || []).includes(t));
+      if (common.length > 0) {
+        waiting.splice(i, 1);
+        connectPair(socket, cand, common);
+        return;
+      }
+    }
+  }
+
+  // 2nd pass — random match from queue
   while (waiting.length > 0) {
-    const candidateId = waiting.shift();
-    const candidate   = io.sockets.sockets.get(candidateId);
-    if (candidate && candidate.connected) {
-      pairs.set(socket.id, candidateId);
-      pairs.set(candidateId, socket.id);
-      socket.emit('matched');
-      candidate.emit('matched');
-      socket.emit('initiate'); // this socket makes the WebRTC offer
+    const candId = waiting.shift();
+    const cand   = io.sockets.sockets.get(candId);
+    if (cand && cand.connected) {
+      connectPair(socket, cand, []);
       return;
     }
   }
+
+  // No one available — add to queue
   waiting.push(socket.id);
   socket.emit('waiting');
 }
 
 function releaseUser(socketId) {
-  // Remove from waiting queue
   const qi = waiting.indexOf(socketId);
   if (qi !== -1) waiting.splice(qi, 1);
 
-  // Notify and release partner
   const partnerId = pairs.get(socketId);
   if (partnerId) {
     pairs.delete(socketId);
     pairs.delete(partnerId);
     const partner = io.sockets.sockets.get(partnerId);
-    if (partner && partner.connected) {
-      partner.emit('stranger_disconnected');
-    }
+    if (partner && partner.connected) partner.emit('stranger_disconnected');
   }
 }
 
 io.on('connection', (socket) => {
+  socket.interests = parseInterests(socket.handshake.query.interests);
+
   matchUser(socket);
 
-  socket.on('next', () => {
-    releaseUser(socket.id);
-    matchUser(socket);
-  });
-
-  socket.on('stop', () => {
-    releaseUser(socket.id);
-    socket.emit('stopped');
-  });
+  socket.on('next', () => { releaseUser(socket.id); matchUser(socket); });
+  socket.on('stop', () => { releaseUser(socket.id); socket.emit('stopped'); });
 
   socket.on('message', (text) => {
     if (typeof text !== 'string' || !text.trim() || text.length > 500) return;
-    const partnerId = pairs.get(socket.id);
-    if (partnerId) io.to(partnerId).emit('message', text.trim());
+    const pid = pairs.get(socket.id);
+    if (pid) io.to(pid).emit('message', text.trim());
   });
 
   socket.on('typing',      () => { const p = pairs.get(socket.id); if (p) io.to(p).emit('typing'); });
   socket.on('stop_typing', () => { const p = pairs.get(socket.id); if (p) io.to(p).emit('stop_typing'); });
 
-  /* WebRTC signaling — just relay to partner */
   socket.on('offer',         (d) => { const p = pairs.get(socket.id); if (p) io.to(p).emit('offer', d); });
   socket.on('answer',        (d) => { const p = pairs.get(socket.id); if (p) io.to(p).emit('answer', d); });
   socket.on('ice_candidate', (d) => { const p = pairs.get(socket.id); if (p) io.to(p).emit('ice_candidate', d); });

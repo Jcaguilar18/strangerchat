@@ -3,9 +3,12 @@
    Socket.io signaling + WebRTC video + text chat
    ═══════════════════════════════════════════════════════════════ */
 
-const socket = io();
+/* ── Read URL params ── */
+const urlParams   = new URLSearchParams(window.location.search);
+const urlInterests = urlParams.get('interests') || '';
+const MODE = document.querySelector('.app')?.dataset.mode || 'text';
 
-const MODE = document.querySelector('.app')?.dataset.mode || 'video'; // 'text' or 'video'
+const socket = io({ query: { interests: urlInterests, mode: MODE } });
 
 let pc          = null;
 let localStream = null;
@@ -19,25 +22,44 @@ const STUN = { iceServers: [
 ] };
 
 /* ── DOM ── */
-const localVideo  = document.getElementById('localVideo');
-const remoteVideo = document.getElementById('remoteVideo');
-const localNoCam  = document.getElementById('localNoCam');
-const remoteNoCam = document.getElementById('remoteNoCam');
-const messagesEl  = document.getElementById('messages');
-const inputEl     = document.getElementById('msgInput');
-const sendBtn     = document.getElementById('sendBtn');
-const nextBtn     = document.getElementById('nextBtn');
-const stopBtn     = document.getElementById('stopBtn');
-const statusBar   = document.getElementById('statusBar');
-const statusText  = document.getElementById('statusText');
-const typingRow   = document.getElementById('typingRow');
+const localVideo   = document.getElementById('localVideo');
+const remoteVideo  = document.getElementById('remoteVideo');
+const localNoCam   = document.getElementById('localNoCam');
+const remoteNoCam  = document.getElementById('remoteNoCam');
+const messagesEl   = document.getElementById('messages');
+const inputEl      = document.getElementById('msgInput');
+const sendBtn      = document.getElementById('sendBtn');
+const nextBtn      = document.getElementById('nextBtn');
+const stopBtn      = document.getElementById('stopBtn');
+const statusBar    = document.getElementById('statusBar');
+const statusText   = document.getElementById('statusText');
+const typingRow    = document.getElementById('typingRow');
+const chatState    = document.getElementById('chatState');
+const chatStateSub = document.getElementById('chatStateSub');
+const interestsBar = document.getElementById('interestsBar');
+const interestsTags = document.getElementById('interestsTags');
+const actionBar    = document.getElementById('actionBar');
+const actionNextBtn = document.getElementById('actionNextBtn');
+
+/* ── Show user's own interest tags in the bar ── */
+function renderUserInterests() {
+  const tags = urlInterests.split(',').map(s => s.trim()).filter(Boolean).slice(0, 5);
+  if (!tags.length || !interestsBar) return;
+  interestsTags.innerHTML = tags.map(t =>
+    `<span class="interests-tag">${t}</span>`
+  ).join('');
+  interestsBar.style.display = 'flex';
+}
+renderUserInterests();
 
 /* ── Camera ── */
 async function initCamera() {
   try {
     localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    localVideo.srcObject = localStream;
-    localNoCam.style.display = 'none';
+    if (localVideo) {
+      localVideo.srcObject = localStream;
+      if (localNoCam) localNoCam.style.display = 'none';
+    }
   } catch (e) {
     console.warn('Camera/mic unavailable — text-only mode.');
   }
@@ -53,8 +75,10 @@ function createPC() {
   }
 
   pc.ontrack = (e) => {
-    remoteVideo.srcObject = e.streams[0];
-    remoteNoCam.style.display = 'none';
+    if (remoteVideo) {
+      remoteVideo.srcObject = e.streams[0];
+      if (remoteNoCam) remoteNoCam.style.display = 'none';
+    }
   };
 
   pc.onicecandidate = (e) => {
@@ -63,17 +87,19 @@ function createPC() {
 
   pc.onconnectionstatechange = () => {
     if (['disconnected', 'failed', 'closed'].includes(pc?.connectionState)) {
-      remoteVideo.srcObject = null;
-      remoteNoCam.style.display = 'flex';
+      if (remoteVideo) remoteVideo.srcObject = null;
+      if (remoteNoCam) remoteNoCam.style.display = 'flex';
     }
   };
 }
 
 function closePC() {
   if (pc) { pc.close(); pc = null; }
-  remoteVideo.srcObject = null;
-  remoteNoCam.style.display = 'flex';
-  remoteNoCam.innerHTML = '<span>👤</span><br/>Waiting…';
+  if (remoteVideo) remoteVideo.srcObject = null;
+  if (remoteNoCam) {
+    remoteNoCam.style.display = 'flex';
+    remoteNoCam.innerHTML = '<span>👤</span><br/>Waiting…';
+  }
 }
 
 async function makeOffer() {
@@ -96,10 +122,28 @@ function setInputEnabled(on) {
   if (on) inputEl.focus();
 }
 
+function showChatState(title, sub) {
+  if (!chatState) return;
+  chatState.querySelector('.chat-state-title').textContent = title;
+  if (chatStateSub) chatStateSub.textContent = sub;
+  chatState.style.display = 'flex';
+}
+
+function hideChatState() {
+  if (chatState) chatState.style.display = 'none';
+}
+
+function showActionBar() {
+  if (actionBar) actionBar.style.display = 'flex';
+}
+
+function hideActionBar() {
+  if (actionBar) actionBar.style.display = 'none';
+}
+
 function addMsg(who, text) {
-  // Remove welcome screen on first message
-  const welcome = messagesEl.querySelector('.welcome');
-  if (welcome) welcome.remove();
+  hideChatState();
+  hideActionBar();
 
   const wrap  = document.createElement('div');
   wrap.className = 'msg msg--' + who;
@@ -125,6 +169,8 @@ function clearChat() {
   typingRow.style.display = 'none';
   isTyping = false;
   clearTimeout(typingTimer);
+  hideChatState();
+  hideActionBar();
 }
 
 /* ── Socket events ── */
@@ -133,21 +179,27 @@ socket.on('waiting', () => {
   setInputEnabled(false);
   clearChat();
   closePC();
-  addMsg('system', 'Searching for someone to chat with…');
+  showChatState('Finding you a stranger…', 'Searching the network');
 });
 
-socket.on('matched', () => {
+socket.on('matched', ({ common } = {}) => {
   setStatus('connected', 'Connected!');
   clearChat();
   addMsg('system', 'You are now chatting with a random stranger. Say hi! 👋');
+  if (common && common.length > 0) {
+    const tags = common.map(t => `#${t}`).join('  ');
+    addMsg('system', `You both like: ${tags} 🎯`);
+  }
   setInputEnabled(true);
+  hideActionBar();
 });
 
 socket.on('initiate', async () => {
-  await makeOffer();
+  if (MODE === 'video') await makeOffer();
 });
 
 socket.on('offer', async (offer) => {
+  if (MODE !== 'video') return;
   createPC();
   await pc.setRemoteDescription(new RTCSessionDescription(offer));
   const answer = await pc.createAnswer();
@@ -156,11 +208,11 @@ socket.on('offer', async (offer) => {
 });
 
 socket.on('answer', async (answer) => {
-  if (pc) await pc.setRemoteDescription(new RTCSessionDescription(answer));
+  if (MODE === 'video' && pc) await pc.setRemoteDescription(new RTCSessionDescription(answer));
 });
 
 socket.on('ice_candidate', async (candidate) => {
-  if (pc) {
+  if (MODE === 'video' && pc) {
     try { await pc.addIceCandidate(new RTCIceCandidate(candidate)); } catch (_) {}
   }
 });
@@ -179,10 +231,11 @@ socket.on('stop_typing', () => {
 
 socket.on('stranger_disconnected', () => {
   setStatus('disconnected', 'Stranger disconnected.');
-  addMsg('system', 'Your chat partner has disconnected. Press Next to find a new stranger.');
+  addMsg('system', 'Your chat partner has disconnected.');
   setInputEnabled(false);
   closePC();
   typingRow.style.display = 'none';
+  showActionBar();
 });
 
 socket.on('stopped', () => {
@@ -190,12 +243,14 @@ socket.on('stopped', () => {
   setInputEnabled(false);
   clearChat();
   closePC();
-  addMsg('system', 'Chat stopped. Press Next to start again.');
+  showChatState('Chat stopped', 'Press "Find New Stranger" to start again');
+  showActionBar();
 });
 
 /* ── Controls ── */
 nextBtn.addEventListener('click', () => socket.emit('next'));
 stopBtn.addEventListener('click', () => socket.emit('stop'));
+if (actionNextBtn) actionNextBtn.addEventListener('click', () => socket.emit('next'));
 
 sendBtn.addEventListener('click', sendMessage);
 inputEl.addEventListener('keydown', (e) => {
@@ -208,7 +263,6 @@ function sendMessage() {
   socket.emit('message', text);
   addMsg('you', text);
   inputEl.value = '';
-  // Stop typing signal
   clearTimeout(typingTimer);
   if (isTyping) { socket.emit('stop_typing'); isTyping = false; }
 }
@@ -234,8 +288,7 @@ function applyViewportHeight() {
 
 function onViewportResize() {
   applyViewportHeight();
-  // Collapse video strip if keyboard likely open (viewport shrank > 100px)
-  const fullH = screen.height;
+  const fullH    = screen.height;
   const currentH = window.visualViewport ? window.visualViewport.height : window.innerHeight;
   const keyboardOpen = fullH - currentH > 150;
   if (videoCol) videoCol.classList.toggle('collapsed', keyboardOpen);
@@ -255,14 +308,6 @@ window.addEventListener('resize', applyViewportHeight);
 inputEl.addEventListener('focus', () => {
   setTimeout(() => { messagesEl.scrollTop = messagesEl.scrollHeight; }, 350);
 });
-
-/* ── Socket: skip WebRTC signals in text mode ── */
-if (MODE === 'text') {
-  socket.off && socket.off('initiate');
-  socket.off && socket.off('offer');
-  socket.off && socket.off('answer');
-  socket.off && socket.off('ice_candidate');
-}
 
 /* ── Init ── */
 if (MODE === 'video') initCamera();

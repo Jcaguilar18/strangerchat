@@ -13,57 +13,101 @@
 
   <div class="home-wrap">
 
-    <!-- Header -->
     <header class="home-header">
-      <div class="home-brand">
-        <span class="home-brand-icon">🎲</span>
-        StrangerChat
-      </div>
+      <div class="home-brand">🎲 StrangerChat</div>
     </header>
 
-    <!-- Hero -->
     <section class="home-hero">
       <h1 class="home-title">Talk to <span class="home-title-accent">Strangers</span></h1>
-      <p class="home-sub">Anonymous, instant, free — no account needed.</p>
+      <p class="home-sub">Anonymous · Instant · Free — no account needed</p>
     </section>
 
-    <!-- Mode picker -->
-    <section class="mode-grid">
+    <!-- Interest input -->
+    <div class="interest-wrap">
+      <label class="interest-label" for="interestInput">
+        🏷️ Add your interests <span class="interest-optional">(optional)</span>
+      </label>
+      <input
+        id="interestInput"
+        class="interest-input"
+        type="text"
+        placeholder="e.g. gaming, music, travel, coding…"
+        maxlength="120"
+        autocomplete="off"
+      />
+      <p class="interest-hint">Separate with commas · We'll try to match you with someone who shares them</p>
 
-      <a href="/chat?mode=text" class="mode-card mode-card--text">
+      <!-- Tag chips preview -->
+      <div class="tag-chips" id="tagChips"></div>
+    </div>
+
+    <!-- Mode cards -->
+    <div class="mode-grid">
+      <button class="mode-card mode-card--text" onclick="startChat('text')">
         <div class="mode-icon">💬</div>
-        <h2 class="mode-title">Text Chat</h2>
-        <p class="mode-desc">Chat anonymously with a random stranger using just text. Fast and private.</p>
-        <div class="mode-badges">
-          <span class="badge">No camera needed</span>
-          <span class="badge">Instant</span>
+        <div class="mode-info">
+          <h2 class="mode-title">Text Chat</h2>
+          <p class="mode-desc">Chat anonymously using just text. No camera needed.</p>
+          <div class="mode-badges">
+            <span class="badge">No camera</span>
+            <span class="badge">Fast</span>
+          </div>
         </div>
-        <div class="mode-btn mode-btn--text">Start Text Chat →</div>
-      </a>
+        <div class="mode-arrow">→</div>
+      </button>
 
-      <a href="/chat?mode=video" class="mode-card mode-card--video">
+      <button class="mode-card mode-card--video" onclick="startChat('video')">
         <div class="mode-icon">📹</div>
-        <h2 class="mode-title">Video Chat</h2>
-        <p class="mode-desc">Go face to face with a random stranger over live video and chat.</p>
-        <div class="mode-badges">
-          <span class="badge">Camera + mic</span>
-          <span class="badge">Peer-to-peer</span>
+        <div class="mode-info">
+          <h2 class="mode-title">Video Chat</h2>
+          <p class="mode-desc">Go face to face over live video + text chat.</p>
+          <div class="mode-badges">
+            <span class="badge">Camera + mic</span>
+            <span class="badge">P2P</span>
+          </div>
         </div>
-        <div class="mode-btn mode-btn--video">Start Video Chat →</div>
-      </a>
+        <div class="mode-arrow">→</div>
+      </button>
+    </div>
 
-    </section>
-
-    <!-- Footer note -->
     <footer class="home-footer">
-      <span>🔒 Peer-to-peer video — we never see your camera</span>
+      <span>🔒 Peer-to-peer video</span>
       <span class="home-footer-sep">·</span>
-      <span>🚫 No sign up required</span>
+      <span>🚫 No sign up</span>
       <span class="home-footer-sep">·</span>
       <span>⚡ Connect instantly</span>
     </footer>
 
   </div>
 
+  <script>
+    const input = document.getElementById('interestInput');
+    const chips = document.getElementById('tagChips');
+
+    function getTags() {
+      return input.value.split(',').map(s => s.trim()).filter(Boolean);
+    }
+
+    function renderChips() {
+      const tags = getTags();
+      chips.innerHTML = tags.map(t =>
+        `<span class="tag-chip">${t}</span>`
+      ).join('');
+    }
+
+    input.addEventListener('input', renderChips);
+
+    function startChat(mode) {
+      const tags = getTags().slice(0, 5);
+      const params = new URLSearchParams({ mode });
+      if (tags.length) params.set('interests', tags.join(','));
+      window.location.href = '/chat?' + params.toString();
+    }
+
+    // Allow Enter to start text chat
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') startChat('text');
+    });
+  </script>
 </body>
 </html>

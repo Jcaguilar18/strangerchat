@@ -6,7 +6,7 @@
   <title>StrangerChat — <%= mode === 'text' ? 'Text' : 'Video' %> Chat</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
@@ -17,49 +17,66 @@
       <span class="brand-icon">🎲</span>
       <span class="brand-name">StrangerChat</span>
     </a>
+
     <div id="statusBar" class="status status--searching">
       <span class="status-dot"></span>
-      <span id="statusText">Looking for a stranger…</span>
+      <span id="statusText">Searching…</span>
     </div>
+
     <div class="nav-actions">
-      <button id="nextBtn" class="btn btn-next">Next</button>
-      <button id="stopBtn" class="btn btn-stop">Stop</button>
+      <span class="mode-badge mode-badge--<%= mode %>">
+        <%= mode === 'text' ? '💬 Text' : '📹 Video' %>
+      </span>
+      <button id="nextBtn" class="btn btn-next">Next ▶</button>
+      <button id="stopBtn" class="btn btn-stop">■ Stop</button>
     </div>
   </header>
 
   <!-- Main layout -->
   <main class="app" data-mode="<%= mode %>">
 
-    <!-- Left: video panels (hidden in text mode) -->
-    <section class="video-col<%= mode === 'text' ? ' video-col--hidden' : '' %>">
+    <% if (mode === 'video') { %>
+    <!-- Video panels — only shown in video mode -->
+    <section class="video-col">
       <div class="video-box">
         <video id="localVideo" autoplay muted playsinline></video>
-        <div class="no-cam" id="localNoCam">
-          <span>📷</span><br/>Camera off
-        </div>
+        <div class="no-cam" id="localNoCam"><span>📷</span><br/>Camera off</div>
         <span class="vid-label">You</span>
       </div>
       <div class="video-box">
         <video id="remoteVideo" autoplay playsinline></video>
-        <div class="no-cam" id="remoteNoCam">
-          <span>👤</span><br/>Waiting…
-        </div>
+        <div class="no-cam" id="remoteNoCam"><span>👤</span><br/>Waiting…</div>
         <span class="vid-label">Stranger</span>
       </div>
     </section>
+    <% } %>
 
-    <!-- Right: chat -->
+    <!-- Chat panel -->
     <section class="chat-col">
+
+      <!-- Interest tags bar -->
+      <div class="interests-bar" id="interestsBar" style="display:none">
+        <span class="interests-label">🏷️ Your interests:</span>
+        <div class="interests-tags" id="interestsTags"></div>
+      </div>
+
+      <!-- Messages -->
       <div class="messages" id="messages">
-        <div class="welcome">
-          <p>👋 Click <strong>Next</strong> to connect to a stranger.</p>
-          <p class="welcome-sub">Text and video chat — no account needed.</p>
+        <!-- Searching state -->
+        <div class="chat-state" id="chatState">
+          <div class="chat-state-spinner"></div>
+          <p class="chat-state-title">Finding you a stranger…</p>
+          <p class="chat-state-sub" id="chatStateSub">Searching the network</p>
         </div>
       </div>
+
+      <!-- Typing indicator -->
       <div class="typing-row" id="typingRow">
         <span class="typing-dots"><span></span><span></span><span></span></span>
         Stranger is typing…
       </div>
+
+      <!-- Input bar -->
       <div class="input-bar">
         <input
           type="text"
@@ -72,8 +89,14 @@
         />
         <button id="sendBtn" class="btn btn-send" disabled>Send</button>
       </div>
-    </section>
 
+      <!-- Bottom action bar (visible when disconnected / stopped) -->
+      <div class="action-bar" id="actionBar" style="display:none">
+        <button class="btn btn-next btn-action-next" id="actionNextBtn">▶ Find New Stranger</button>
+        <a href="/" class="btn btn-ghost btn-action-home">← Home</a>
+      </div>
+
+    </section>
   </main>
 
   <script src="/socket.io/socket.io.js"></script>
