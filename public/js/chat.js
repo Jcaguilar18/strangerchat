@@ -216,10 +216,27 @@ socket.on('stopped', () => {
   showActionBar();
 });
 
+/* ── Confirm-on-button helper ── */
+function withConfirm(btn, label, action) {
+  if (btn.dataset.confirming === '1') {
+    clearTimeout(btn._ct);
+    btn.dataset.confirming = '0';
+    btn.textContent = label;
+    action();
+  } else {
+    btn.dataset.confirming = '1';
+    btn.textContent = 'Sure?';
+    btn._ct = setTimeout(() => {
+      btn.dataset.confirming = '0';
+      btn.textContent = label;
+    }, 3000);
+  }
+}
+
 /* ── Controls ── */
-nextBtn.addEventListener('click', () => socket.emit('next'));
+nextBtn.addEventListener('click', () => withConfirm(nextBtn, 'Next ▶', () => socket.emit('next')));
 stopBtn.addEventListener('click', () => socket.emit('stop'));
-if (actionNextBtn)  actionNextBtn.addEventListener('click',  () => socket.emit('next'));
+if (actionNextBtn) actionNextBtn.addEventListener('click', () => withConfirm(actionNextBtn, '▶ Find New Stranger', () => socket.emit('next')));
 if (stopSearchBtn)  stopSearchBtn.addEventListener('click',  () => socket.emit('stop'));
 if (changeTagsBtn)  changeTagsBtn.addEventListener('click',  () => {
   const p = new URLSearchParams();
