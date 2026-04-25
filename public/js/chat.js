@@ -222,19 +222,36 @@ inputEl.addEventListener('input', () => {
   }, 1500);
 });
 
-/* ── Mobile: keep input visible when keyboard opens ── */
-if ('visualViewport' in window) {
-  window.visualViewport.addEventListener('resize', () => {
-    // Scroll messages to bottom so latest message stays visible
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-  });
+/* ── Mobile: dynamically resize app to visual viewport ── */
+const videoCol = document.querySelector('.video-col');
+
+function applyViewportHeight() {
+  const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  document.documentElement.style.setProperty('--app-h', h + 'px');
 }
 
-/* ── Scroll to bottom when input is focused on mobile ── */
+function onViewportResize() {
+  applyViewportHeight();
+  // Collapse video strip if keyboard likely open (viewport shrank > 100px)
+  const fullH = screen.height;
+  const currentH = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  const keyboardOpen = fullH - currentH > 150;
+  if (videoCol) videoCol.classList.toggle('collapsed', keyboardOpen);
+  if (keyboardOpen) {
+    setTimeout(() => { messagesEl.scrollTop = messagesEl.scrollHeight; }, 100);
+  }
+}
+
+applyViewportHeight();
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', onViewportResize);
+  window.visualViewport.addEventListener('scroll', onViewportResize);
+}
+window.addEventListener('resize', applyViewportHeight);
+
+/* ── Scroll to bottom when input focused ── */
 inputEl.addEventListener('focus', () => {
-  setTimeout(() => {
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-  }, 300);
+  setTimeout(() => { messagesEl.scrollTop = messagesEl.scrollHeight; }, 350);
 });
 
 /* ── Init ── */
