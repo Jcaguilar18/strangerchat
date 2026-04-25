@@ -222,5 +222,20 @@ inputEl.addEventListener('input', () => {
   }, 1500);
 });
 
+/* ── Mobile: keep input visible when keyboard opens ── */
+if ('visualViewport' in window) {
+  window.visualViewport.addEventListener('resize', () => {
+    // Scroll messages to bottom so latest message stays visible
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  });
+}
+
+/* ── Scroll to bottom when input is focused on mobile ── */
+inputEl.addEventListener('focus', () => {
+  setTimeout(() => {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }, 300);
+});
+
 /* ── Init ── */
 initCamera();
