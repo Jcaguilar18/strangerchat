@@ -61,9 +61,11 @@ async function initCamera() {
       if (localNoCam) localNoCam.style.display = 'none';
     }
   } catch (e) {
-    console.warn('Camera/mic unavailable — text-only mode.');
+    console.warn('Camera/mic unavailable.');
   }
 }
+
+/* text mode never calls initCamera — mic/camera only requested for video mode */
 
 /* ── WebRTC ── */
 function createPC() {
