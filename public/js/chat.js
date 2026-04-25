@@ -5,6 +5,8 @@
 
 const socket = io();
 
+const MODE = document.querySelector('.app')?.dataset.mode || 'video'; // 'text' or 'video'
+
 let pc          = null;
 let localStream = null;
 let isTyping    = false;
@@ -254,5 +256,13 @@ inputEl.addEventListener('focus', () => {
   setTimeout(() => { messagesEl.scrollTop = messagesEl.scrollHeight; }, 350);
 });
 
+/* ── Socket: skip WebRTC signals in text mode ── */
+if (MODE === 'text') {
+  socket.off && socket.off('initiate');
+  socket.off && socket.off('offer');
+  socket.off && socket.off('answer');
+  socket.off && socket.off('ice_candidate');
+}
+
 /* ── Init ── */
-initCamera();
+if (MODE === 'video') initCamera();

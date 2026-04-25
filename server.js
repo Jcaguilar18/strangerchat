@@ -11,7 +11,11 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.get('/', (req, res) => res.render('index'));
+app.get('/', (req, res) => res.render('home'));
+app.get('/chat', (req, res) => {
+  const mode = req.query.mode === 'text' ? 'text' : 'video';
+  res.render('index', { mode });
+});
 
 /* ── Matching state ── */
 const waiting = []; // socket IDs waiting for a partner
