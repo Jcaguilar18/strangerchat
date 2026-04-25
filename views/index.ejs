@@ -60,20 +60,20 @@
         <div class="interests-tags" id="interestsTags"></div>
       </div>
 
-      <!-- Messages -->
-      <div class="messages" id="messages">
-        <!-- Searching state -->
-        <div class="chat-state" id="chatState">
-          <div class="chat-state-spinner"></div>
-          <p class="chat-state-title">Finding you a stranger…</p>
-          <p class="chat-state-sub" id="chatStateSub">Searching the network</p>
-          <div class="chat-state-actions" id="chatStateActions" style="display:none">
-            <button id="stopSearchBtn" class="btn btn-stop">■ Stop</button>
-            <button id="changeTagsBtn" class="btn btn-ghost">✏️ Change Tags</button>
-            <a href="/" class="btn btn-ghost">← Home</a>
-          </div>
+      <!-- Searching / stopped state — fills the full area, centered -->
+      <div class="chat-state" id="chatState">
+        <div class="chat-state-spinner" id="chatStateSpinner"></div>
+        <p class="chat-state-title">Finding you a stranger…</p>
+        <p class="chat-state-sub" id="chatStateSub">Searching the network</p>
+        <div class="chat-state-actions" id="chatStateActions">
+          <button id="stopSearchBtn" class="btn btn-stop">■ Stop</button>
+          <button id="changeTagsBtn" class="btn btn-ghost">✏️ Change Tags</button>
+          <a href="/" class="btn btn-ghost">← Home</a>
         </div>
       </div>
+
+      <!-- Messages (hidden while searching) -->
+      <div class="messages" id="messages" style="display:none"></div>
 
       <!-- Typing indicator -->
       <div class="typing-row" id="typingRow">

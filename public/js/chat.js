@@ -1,10 +1,8 @@
 /* ═══════════════════════════════════════════════════════════════
    StrangerChat — Client
-   Socket.io signaling + WebRTC video + text chat
    ═══════════════════════════════════════════════════════════════ */
 
-/* ── Read URL params ── */
-const urlParams   = new URLSearchParams(window.location.search);
+const urlParams    = new URLSearchParams(window.location.search);
 const urlInterests = urlParams.get('interests') || '';
 const MODE = document.querySelector('.app')?.dataset.mode || 'text';
 
@@ -22,35 +20,34 @@ const STUN = { iceServers: [
 ] };
 
 /* ── DOM ── */
-const localVideo   = document.getElementById('localVideo');
-const remoteVideo  = document.getElementById('remoteVideo');
-const localNoCam   = document.getElementById('localNoCam');
-const remoteNoCam  = document.getElementById('remoteNoCam');
-const messagesEl   = document.getElementById('messages');
-const inputEl      = document.getElementById('msgInput');
-const sendBtn      = document.getElementById('sendBtn');
-const nextBtn      = document.getElementById('nextBtn');
-const stopBtn      = document.getElementById('stopBtn');
-const statusBar    = document.getElementById('statusBar');
-const statusText   = document.getElementById('statusText');
-const typingRow    = document.getElementById('typingRow');
-const chatState       = document.getElementById('chatState');
-const chatStateSub    = document.getElementById('chatStateSub');
+const localVideo       = document.getElementById('localVideo');
+const remoteVideo      = document.getElementById('remoteVideo');
+const localNoCam       = document.getElementById('localNoCam');
+const remoteNoCam      = document.getElementById('remoteNoCam');
+const messagesEl       = document.getElementById('messages');
+const inputEl          = document.getElementById('msgInput');
+const sendBtn          = document.getElementById('sendBtn');
+const nextBtn          = document.getElementById('nextBtn');
+const stopBtn          = document.getElementById('stopBtn');
+const statusBar        = document.getElementById('statusBar');
+const statusText       = document.getElementById('statusText');
+const typingRow        = document.getElementById('typingRow');
+const chatState        = document.getElementById('chatState');
+const chatStateSub     = document.getElementById('chatStateSub');
+const chatStateSpinner = document.getElementById('chatStateSpinner');
 const chatStateActions = document.getElementById('chatStateActions');
-const interestsBar    = document.getElementById('interestsBar');
-const interestsTags   = document.getElementById('interestsTags');
-const actionBar       = document.getElementById('actionBar');
-const actionNextBtn   = document.getElementById('actionNextBtn');
-const stopSearchBtn   = document.getElementById('stopSearchBtn');
-const changeTagsBtn   = document.getElementById('changeTagsBtn');
+const interestsBar     = document.getElementById('interestsBar');
+const interestsTags    = document.getElementById('interestsTags');
+const actionBar        = document.getElementById('actionBar');
+const actionNextBtn    = document.getElementById('actionNextBtn');
+const stopSearchBtn    = document.getElementById('stopSearchBtn');
+const changeTagsBtn    = document.getElementById('changeTagsBtn');
 
-/* ── Show user's own interest tags in the bar ── */
+/* ── Show user's own interest tags ── */
 function renderUserInterests() {
   const tags = urlInterests.split(',').map(s => s.trim()).filter(Boolean).slice(0, 5);
   if (!tags.length || !interestsBar) return;
-  interestsTags.innerHTML = tags.map(t =>
-    `<span class="interests-tag">${t}</span>`
-  ).join('');
+  interestsTags.innerHTML = tags.map(t => `<span class="interests-tag">${t}</span>`).join('');
   interestsBar.style.display = 'flex';
 }
 renderUserInterests();
@@ -68,28 +65,15 @@ async function initCamera() {
   }
 }
 
-/* text mode never calls initCamera — mic/camera only requested for video mode */
-
 /* ── WebRTC ── */
 function createPC() {
   if (pc) { pc.close(); pc = null; }
   pc = new RTCPeerConnection(STUN);
-
-  if (localStream) {
-    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-  }
-
+  if (localStream) localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
   pc.ontrack = (e) => {
-    if (remoteVideo) {
-      remoteVideo.srcObject = e.streams[0];
-      if (remoteNoCam) remoteNoCam.style.display = 'none';
-    }
+    if (remoteVideo) { remoteVideo.srcObject = e.streams[0]; if (remoteNoCam) remoteNoCam.style.display = 'none'; }
   };
-
-  pc.onicecandidate = (e) => {
-    if (e.candidate) socket.emit('ice_candidate', e.candidate);
-  };
-
+  pc.onicecandidate = (e) => { if (e.candidate) socket.emit('ice_candidate', e.candidate); };
   pc.onconnectionstatechange = () => {
     if (['disconnected', 'failed', 'closed'].includes(pc?.connectionState)) {
       if (remoteVideo) remoteVideo.srcObject = null;
@@ -101,10 +85,7 @@ function createPC() {
 function closePC() {
   if (pc) { pc.close(); pc = null; }
   if (remoteVideo) remoteVideo.srcObject = null;
-  if (remoteNoCam) {
-    remoteNoCam.style.display = 'flex';
-    remoteNoCam.innerHTML = '<span>👤</span><br/>Waiting…';
-  }
+  if (remoteNoCam) { remoteNoCam.style.display = 'flex'; remoteNoCam.innerHTML = '<span>👤</span><br/>Waiting…'; }
 }
 
 async function makeOffer() {
@@ -121,88 +102,78 @@ function setStatus(type, text) {
 }
 
 function setInputEnabled(on) {
-  inputEl.disabled  = !on;
-  sendBtn.disabled  = !on;
+  inputEl.disabled = !on;
+  sendBtn.disabled = !on;
   chatActive = on;
   if (on) inputEl.focus();
 }
 
+/* Show the centered state panel and hide the messages list */
 function showChatState(title, sub, showActions = false) {
-  if (!chatState) return;
   chatState.querySelector('.chat-state-title').textContent = title;
   if (chatStateSub) chatStateSub.textContent = sub;
-  chatState.style.display = 'flex';
+  if (chatStateSpinner) chatStateSpinner.style.display = showActions ? 'block' : 'none';
   if (chatStateActions) chatStateActions.style.display = showActions ? 'flex' : 'none';
+  chatState.style.display = 'flex';
+  messagesEl.style.display = 'none';
 }
 
+/* Hide the state panel and reveal the messages list */
 function hideChatState() {
-  if (chatState) chatState.style.display = 'none';
+  chatState.style.display = 'none';
+  messagesEl.style.display = '';
 }
 
-function showActionBar() {
-  if (actionBar) actionBar.style.display = 'flex';
-}
-
-function hideActionBar() {
-  if (actionBar) actionBar.style.display = 'none';
-}
+function showActionBar() { if (actionBar) actionBar.style.display = 'flex'; }
+function hideActionBar()  { if (actionBar) actionBar.style.display = 'none'; }
 
 function addMsg(who, text) {
-  hideChatState();
-  hideActionBar();
-
-  const wrap  = document.createElement('div');
+  const wrap = document.createElement('div');
   wrap.className = 'msg msg--' + who;
-
   if (who !== 'system') {
     const label = document.createElement('span');
     label.className = 'msg-label';
     label.textContent = who === 'you' ? 'You' : 'Stranger';
     wrap.appendChild(label);
   }
-
   const body = document.createElement('span');
   body.className = 'msg-body';
   body.textContent = text;
   wrap.appendChild(body);
-
   messagesEl.appendChild(wrap);
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
-function clearChat() {
+function clearMessages() {
   messagesEl.innerHTML = '';
   typingRow.style.display = 'none';
   isTyping = false;
   clearTimeout(typingTimer);
-  hideChatState();
-  hideActionBar();
 }
 
 /* ── Socket events ── */
 socket.on('waiting', () => {
   setStatus('searching', 'Looking for a stranger…');
   setInputEnabled(false);
-  clearChat();
+  clearMessages();
   closePC();
+  hideActionBar();
   showChatState('Finding you a stranger…', 'Searching the network', true);
 });
 
 socket.on('matched', ({ common } = {}) => {
   setStatus('connected', 'Connected!');
-  clearChat();
+  hideChatState();
+  hideActionBar();
+  clearMessages();
   addMsg('system', 'You are now chatting with a random stranger. Say hi! 👋');
   if (common && common.length > 0) {
-    const tags = common.map(t => `#${t}`).join('  ');
-    addMsg('system', `You both like: ${tags} 🎯`);
+    addMsg('system', `You both like: ${common.map(t => '#' + t).join('  ')} 🎯`);
   }
   setInputEnabled(true);
-  hideActionBar();
 });
 
-socket.on('initiate', async () => {
-  if (MODE === 'video') await makeOffer();
-});
+socket.on('initiate', async () => { if (MODE === 'video') await makeOffer(); });
 
 socket.on('offer', async (offer) => {
   if (MODE !== 'video') return;
@@ -223,17 +194,9 @@ socket.on('ice_candidate', async (candidate) => {
   }
 });
 
-socket.on('message', (text) => {
-  addMsg('stranger', text);
-});
-
-socket.on('typing', () => {
-  typingRow.style.display = 'flex';
-});
-
-socket.on('stop_typing', () => {
-  typingRow.style.display = 'none';
-});
+socket.on('message', (text) => { addMsg('stranger', text); });
+socket.on('typing',      () => { typingRow.style.display = 'flex'; });
+socket.on('stop_typing', () => { typingRow.style.display = 'none'; });
 
 socket.on('stranger_disconnected', () => {
   setStatus('disconnected', 'Stranger disconnected.');
@@ -247,21 +210,21 @@ socket.on('stranger_disconnected', () => {
 socket.on('stopped', () => {
   setStatus('idle', 'Chat stopped.');
   setInputEnabled(false);
-  clearChat();
+  clearMessages();
   closePC();
-  showChatState('Chat stopped', 'Press "Find New Stranger" to start again');
+  showChatState('Chat stopped', 'Find a new stranger or go back home', false);
   showActionBar();
 });
 
 /* ── Controls ── */
 nextBtn.addEventListener('click', () => socket.emit('next'));
 stopBtn.addEventListener('click', () => socket.emit('stop'));
-if (actionNextBtn) actionNextBtn.addEventListener('click', () => socket.emit('next'));
-if (stopSearchBtn) stopSearchBtn.addEventListener('click', () => socket.emit('stop'));
-if (changeTagsBtn) changeTagsBtn.addEventListener('click', () => {
-  const params = new URLSearchParams();
-  if (urlInterests) params.set('interests', urlInterests);
-  window.location.href = '/?' + params.toString();
+if (actionNextBtn)  actionNextBtn.addEventListener('click',  () => socket.emit('next'));
+if (stopSearchBtn)  stopSearchBtn.addEventListener('click',  () => socket.emit('stop'));
+if (changeTagsBtn)  changeTagsBtn.addEventListener('click',  () => {
+  const p = new URLSearchParams();
+  if (urlInterests) p.set('interests', urlInterests);
+  window.location.href = '/?' + p.toString();
 });
 
 sendBtn.addEventListener('click', sendMessage);
@@ -279,18 +242,14 @@ function sendMessage() {
   if (isTyping) { socket.emit('stop_typing'); isTyping = false; }
 }
 
-/* ── Typing detection ── */
 inputEl.addEventListener('input', () => {
   if (!chatActive) return;
   if (!isTyping) { isTyping = true; socket.emit('typing'); }
   clearTimeout(typingTimer);
-  typingTimer = setTimeout(() => {
-    isTyping = false;
-    socket.emit('stop_typing');
-  }, 1500);
+  typingTimer = setTimeout(() => { isTyping = false; socket.emit('stop_typing'); }, 1500);
 });
 
-/* ── Mobile: dynamically resize app to visual viewport ── */
+/* ── Mobile viewport ── */
 const videoCol = document.querySelector('.video-col');
 
 function applyViewportHeight() {
@@ -300,13 +259,9 @@ function applyViewportHeight() {
 
 function onViewportResize() {
   applyViewportHeight();
-  const fullH    = screen.height;
-  const currentH = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-  const keyboardOpen = fullH - currentH > 150;
+  const keyboardOpen = screen.height - (window.visualViewport ? window.visualViewport.height : window.innerHeight) > 150;
   if (videoCol) videoCol.classList.toggle('collapsed', keyboardOpen);
-  if (keyboardOpen) {
-    setTimeout(() => { messagesEl.scrollTop = messagesEl.scrollHeight; }, 100);
-  }
+  if (keyboardOpen) setTimeout(() => { messagesEl.scrollTop = messagesEl.scrollHeight; }, 100);
 }
 
 applyViewportHeight();
@@ -316,7 +271,6 @@ if (window.visualViewport) {
 }
 window.addEventListener('resize', applyViewportHeight);
 
-/* ── Scroll to bottom when input focused ── */
 inputEl.addEventListener('focus', () => {
   setTimeout(() => { messagesEl.scrollTop = messagesEl.scrollHeight; }, 350);
 });
